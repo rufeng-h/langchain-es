@@ -1,0 +1,35 @@
+version: "3"
+services:
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.4
+    container_name: es
+    networks:
+      - elastic
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - ./volumes/elasticsearch/data:/usr/share/elasticsearch/data
+      - ./volumes/elasticsearch/plugins:/usr/share/elasticsearch/plugins
+      - ./volumes/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    environment:
+      discovery.type: single-node
+      TZ: Asia/Shanghai
+    restart: always
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.4
+    container_name: kibana
+    networks:
+      - elastic
+    ports:
+      - "5601:5601"
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./volumes/kibana/data:/usr/share/kibana/data
+      - ./volumes/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+    depends_on:
+      - es
+    restart: always
+networks:
+  elastic:

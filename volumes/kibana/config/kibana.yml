@@ -1,0 +1,22 @@
+### >>>>>>> BACKUP START: Kibana interactive setup (2023-10-19T11:57:54.377Z)
+
+#
+# ** THIS IS AN AUTO-GENERATED FILE **
+#
+
+# Default Kibana configuration for docker target
+#server.host: "0.0.0.0"
+#server.shutdownTimeout: "5s"
+#elasticsearch.hosts: [ "http://elasticsearch:9200" ]
+#monitoring.ui.container.elasticsearch.enabled: true
+### >>>>>>> BACKUP END: Kibana interactive setup (2023-10-19T11:57:54.377Z)
+
+# This section was automatically generated during setup.
+server.host: 0.0.0.0
+server.shutdownTimeout: 5s
+elasticsearch.hosts: [ 'http://es:9200' ]
+monitoring.ui.container.elasticsearch.enabled: true
+elasticsearch.username: kibana_system
+elasticsearch.password: yq7UbfMeNNGkvFh2gBf_
+i18n.locale: zh-CN
+
