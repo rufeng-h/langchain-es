@@ -1,6 +1,8 @@
 import os.path
+import torch
 
 
 class Configuration:
     BASE_DIR = os.path.dirname(__file__)
-    EMBEDDING_MODEL_NAME = r'D:/models/bge-large-zh-v1.5'
+
+    DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
