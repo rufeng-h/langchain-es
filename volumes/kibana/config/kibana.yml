@@ -17,6 +17,6 @@ server.shutdownTimeout: 5s
 elasticsearch.hosts: [ 'http://es:9200' ]
 monitoring.ui.container.elasticsearch.enabled: true
 elasticsearch.username: kibana_system
-elasticsearch.password: yq7UbfMeNNGkvFh2gBf_
+elasticsearch.password: h-3yzvInloC6Dl+==7UX
 i18n.locale: zh-CN
 
