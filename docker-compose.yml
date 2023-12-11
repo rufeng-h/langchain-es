@@ -15,7 +15,7 @@ services:
     environment:
       discovery.type: single-node
       TZ: Asia/Shanghai
-    restart: always
+    restart: unless-stopped
   kibana:
     image: docker.elastic.co/kibana/kibana:8.10.4
     container_name: kibana
@@ -30,6 +30,6 @@ services:
       - ./volumes/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
     depends_on:
       - es
-    restart: always
+    restart: unless-stopped
 networks:
   elastic:
