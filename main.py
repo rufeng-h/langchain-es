@@ -1,24 +1,28 @@
-import json
-import os.path
-import re
-from pathlib import Path
-
+import uvicorn
+from elasticsearch import AsyncElasticsearch
+from fastapi import FastAPI
 from sentence_transformers import SentenceTransformer
 
-from schemas import Book
+app = FastAPI()
 
-text = Path(os.path.join(os.path.dirname(__file__), 'bookdata.txt')).read_text(encoding='utf-8')
-text = re.sub(r'([\u4e00-\u9fa5])"([\u4e00-\u9fa5，\d、？！：《》（）。]+)"', r'\1“\2”', text)
-it = iter(text.splitlines())
-ls = []
-for _, item in zip(it, it):
-    ls.append(Book(**json.loads(item)))
+model = SentenceTransformer('D:/models/bge-large-zh-v1.5')
+query_instruction = "为这个句子生成表示以用于检索相关文章："
+es_client = AsyncElasticsearch("http://localhost:9200")
 
-sentences_1 = ["样例数据-1", "样例数据-2"]
-sentences_2 = ["样例数据-3", "样例数据-4"]
-model = SentenceTransformer('BAAI/bge-large-zh-v1.5')
-embeddings_1 = model.encode(sentences_1, normalize_embeddings=True)
-embeddings_2 = model.encode(sentences_2, normalize_embeddings=True)
-similarity = embeddings_1 @ embeddings_2.T
-print(similarity)
 
+@app.get('/knn_search')
+async def knn_search(query: str):
+    print(query)
+    knn = {
+        "field": "info_vector",
+        "k": 10,
+        "query_vector": model.encode(query_instruction + query, normalize_embeddings=True),
+        "num_candidates": 50
+    }
+
+    response = await es_client.search(index='book', knn=knn)
+    return response.body
+
+
+if __name__ == '__main__':
+    uvicorn.run(app)
