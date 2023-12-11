@@ -12,7 +12,6 @@ es_client = AsyncElasticsearch("http://localhost:9200")
 
 @app.get('/knn_search')
 async def knn_search(query: str):
-    print(query)
     knn = {
         "field": "info_vector",
         "k": 10,

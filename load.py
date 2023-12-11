@@ -27,11 +27,13 @@ settings = {
         "analyzer": {
             "ik_smart_no_stop": {
                 "type": "custom",
-                "tokenizer": "ik_smart"
+                "tokenizer": "ik_smart",
+                "filter": [],
             },
             "ik_max_word_no_stop": {
                 "type": "custom",
-                "tokenizer": "ik_max_word"
+                "filter": [],
+                "tokenizer": "ik_max_word",
             }
         }
     }
@@ -51,6 +53,9 @@ mappings = {
             "search_quote_analyzer": "ik_smart_no_stop",
             "search_analyzer": "ik_smart",
             "copy_to": "all",
+        },
+        "meta": {
+            "type": "keyword",
         },
         "publish": {
             "type": "keyword",

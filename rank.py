@@ -1,13 +1,10 @@
-import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+import os
+from pathlib import Path
 
-tokenizer = AutoTokenizer.from_pretrained(r'D:/models/bge-reranker-large')
-model = AutoModelForSequenceClassification.from_pretrained('D:/models/bge-reranker-large')
-model.eval()
+stopword_path = 'stopword'
+s = set()
+for f in os.listdir(stopword_path):
+    filepath = os.path.join(stopword_path, f)
+    s.update(set(Path(filepath).read_text(encoding='utf-8').splitlines()))
 
-pairs = [['what is panda?', 'hi'], ['what is panda?',
-                                    'The giant panda (Ailuropoda melanoleuca), sometimes called a panda bear or simply panda, is a bear species endemic to China.']]
-with torch.no_grad():
-    inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512)
-    scores = model(**inputs, return_dict=True).logits.view(-1, ).float()
-    print(scores)
+Path(os.path.join(stopword_path, 'ext_stopword.dic')).write_text('\n'.join(s), encoding='utf-8')
