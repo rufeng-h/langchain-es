@@ -48,7 +48,13 @@ settings = {
                 "type": "pattern_replace",
                 "pattern": "[。？！，、；：“”‘（ ）《》〈〉【】『』「 」﹃﹄ 〔〕.—～﹏￥?!]",
                 "replacement": "",
-            }
+            },
+            # "punctuation_char_filter": {
+            #     "type": "mapping",
+            #     "mappings": [
+            #         "： =>",
+            #     ]
+            # }
         },
         # 未使用
         "filter": {
@@ -75,6 +81,12 @@ mappings = {
             "search_quote_analyzer": "ik_smart_no_stop",
             "search_analyzer": "ik_smart",
             "copy_to": "all",
+            "fields": {
+                "keyword": {
+                    "type": "keyword",
+                    # "normalizer": "punctuation_normalizer"
+                }
+            }
         },
         "meta": {
             "doc_values": False,
