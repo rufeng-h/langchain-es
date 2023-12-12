@@ -34,6 +34,31 @@ settings = {
                 "type": "custom",
                 "filter": [],
                 "tokenizer": "ik_max_word",
+            },
+
+        },
+        "normalizer": {
+            "punctuation_normalizer": {
+                "type": "custom",
+                "char_filter": "punctuation_char_filter"
+            }
+        },
+        "char_filter": {
+            "punctuation_char_filter": {
+                "type": "pattern_replace",
+                "pattern": "[。？！，、；：“”‘（ ）《》〈〉【】『』「 」﹃﹄ 〔〕.—～﹏￥?!]",
+                "replacement": "",
+            }
+        },
+        # 未使用
+        "filter": {
+            "punctuation_stop": {
+                # "stopwords_path":"",
+                "type": "stop",
+                "stopwords": ['。', '？', '！', '，', '、', '；', '：', '“', '”', '‘', '（ ', '）', '《', '》', '〈', '〉',
+                              '【', '】', '『', '』', '「 ', '」', '﹃', '﹄ ', '〔', '〕', '.', '—', '～', '﹏', '￥',
+                              # 英文
+                              '?', '!', ]
             }
         }
     }
@@ -44,9 +69,6 @@ mappings = {
         "excludes": ["*vector"]
     },
     "properties": {
-        "id": {
-            "type": "keyword"
-        },
         "name": {
             "type": "text",
             "analyzer": "ik_max_word",
@@ -55,19 +77,32 @@ mappings = {
             "copy_to": "all",
         },
         "meta": {
+            "doc_values": False,
+            "norms": False,
             "type": "keyword",
+            "normalizer": "punctuation_normalizer"
         },
         "publish": {
             "type": "keyword",
+            "doc_values": False,
+            "norms": False,
+            "normalizer": "punctuation_normalizer",
             "copy_to": "meta",
         },
         "type": {
             "type": "keyword",
+            "normalizer": "punctuation_normalizer",
+            "doc_values": False,
+            "norms": False,
             "copy_to": "meta",
         },
         "author": {
-            "type": "keyword",
-            "copy_to": "meta",
+            "norms": False,
+            "type": "text",
+            "analyzer": "ik_max_word",
+            "search_quote_analyzer": "ik_smart_no_stop",
+            "search_analyzer": "ik_smart",
+            "copy_to": "all",
         },
         "info": {
             "type": "text",
@@ -77,6 +112,7 @@ mappings = {
             "search_quote_analyzer": "ik_smart_no_stop"
         },
         "all": {
+            "norms": False,
             "type": "text",
             "analyzer": "ik_max_word",
             "search_analyzer": "ik_smart",
