@@ -85,6 +85,9 @@ mappings = {
                 "keyword": {
                     "type": "keyword",
                     # "normalizer": "punctuation_normalizer"
+                }, "text": {
+                    "type": "text",
+                    "index": False
                 }
             }
         },

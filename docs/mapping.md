@@ -32,12 +32,20 @@
 
 - \_routing，影响分片的计算，默认的\_routing值是文档id，可以为每个文档指定routing值，也可以在检索时指定routing值。默认的分片路由计算是以下公式
 
-  > ```python
+  > ```text
   > routing_factor = index.num_routing_shards / index.num_primary_shards
   > shard_num = (hash(_routing) % index.num_routing_shards) / routing_factor
   > ```
 
--  \_source，存储原始文档，可以禁用，可以筛选字段。
+- \_source，存储原始文档，可以禁用，可以筛选字段。如果磁盘空间比较不够用，可以考虑[synthetic _source](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-source-field.html#synthetic-source)，节省空间但影响性能，或者禁用_source不存储源文档，但并不建议这样做，会带来以下问题。
+
+  - 不支持update、update_by_query、reindex API。
+  - 不支持高亮。
+  - 不支持重建索引、映射、文本分析器、升级索引。
+  - 不支持调试搜索聚合的详细过程。
+  - 影响自动修复索引。
+
+  总之，非特殊情况，空间不够用考虑synthetic \_source、[compression level](https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules.html#index-codec)而不是禁用_source。
 
 - \_tier，检索时首选想要的数据等级，例如data_hot，data_warm，data_cold。
 
@@ -139,7 +147,7 @@
 
 - similarity，相似度评分算法，默认是BM25。
 
-- store，\_source中会把原文档存储一次，某些时候如果想要单独某个字段，需要从\_source中去除整个文档再对进行字段过滤，当存在很大的字段时，取出来是比较耗时的。如果不需要这个很大的字段，只需要部分其他字段时，可以考虑将其他字段设置store，es会将这些字段另外存储一份，查询时设置_source为false，从fields中取出这些字段，避免大字段的读取。
+- store，\_source中会把原文档存储一次，某些时候如果想要单独某个字段，需要从\_source中去除整个文档再对进行字段过滤，当存在很大的字段时，取出来是比较耗时的。如果不需要这个很大的字段，只需要部分其他字段时，可以考虑将其他字段设置store，es会将这些字段另外存储一份，查询时设置_source为false，从store_fields中取出这些字段，避免大字段的读取。
 
   由于不知道原始字段是单个值还是数组，store后的字段统一返回为数组。
 
@@ -174,14 +182,77 @@
 
   数组中所有值必须是同一数据类型，第一个元素的数据类型决定整个数组的数据类型，数组中的null值可以配置为忽略或者null_value类型。
 
-- Binary，二进制，接受base64字符串，默认是不store并且无法检索的。
+- Binary，二进制，接受base64字符串，默认是不store并且不会被index。
 
-## 查询
+- Boolean，布尔值。
 
-- match，最常用，分词，全文检索。
+- Completion，自动补全，输入term的一部分，返回一系列可选的term用于补全，可配置参数比较多，如补全来自哪些字段，前置和后置过滤等。
 
-- match_phrase，与match类似，**但是索引分词和查询分词结果必须相同，包括分词得到的顺序**，可配置参数slop，允许词和词之间出现其他token的数量。
+- Date，日期，毫秒存储。
 
-  本人在ik分词测试，需要将analyzer和search_quote_analyzer设置成一样的分词器，才能正确检索出结果。
+- Date nanoseconds，纳秒存储，支持范围1970到2262。
 
-  match_phrase容易受到停用的影响，不配置ik的停用词影响match搜索，配置之后影响match_phrase，本人使用ik的tokenizer自定义analyzer，但是**ik的tokenizer就完成了中文标点去除、停用词去除以及分词的功能**，无法配置其仅完成分词，需要修改源码。
+- Dense vector，密集向量，其含义及详细配置可查看[这篇文章](https://blog.csdn.net/weixin_43701894/article/details/134222595)。
+
+- Flattened，默认情况下，对象的子字段会被单独映射和索引，如果子字段的名称和类型没有提前确定，会使用自动映射。使用Flattened会将对象的所有叶子节点的值作为keyword索引到一个字段中，这个对象里的所有属性可以被查询和聚合。当不指定子字段时，会查询所有叶子节点，也可以使用属性.属性的方式查询某个特定属性。
+
+- Geopoint，地理坐标。
+
+- Geophape，地理范围。
+
+- Histogram，数据预先聚合过的直方图。
+
+- IP，IPV4或者IPV6。
+
+- Join，可以维护同一索引中不同文档之间的父子关系，支持连接查询。
+
+- Keyword，适用于term级的查询，有三种子类型
+  - keyword，结构化的数据，比如ID、邮件地址、标签、域名等。
+  - constant_keyword，固定不变的。
+  - wildcard，适合非结构化的，机器生成的数据，比如日志，对于大字段做了优化。
+
+  keyword类型配置normalizer，可以在被所引之前进行前置处理，默认不进行任何处理。
+
+- Nested，object的特殊版本，允许对象数组。
+
+- Numeric，数值类型。
+
+- Object，json对象类型。
+
+- Percolator， 和[percolate query](https://www.elastic.co/guide/en/elasticsearch/reference/8.11/query-dsl-percolate-query.html)一起工作。
+
+- Point，二维数据点。
+
+- Range，范围。
+
+- Rank feature，和[rank_feature](https://www.elastic.co/guide/en/elasticsearch/reference/8.11/query-dsl-rank-feature-query.html)一起工作，可以影响文档评分。
+
+- Rank features，可以指定多个影响评分的字段。
+
+- Search-as-your-type，类似 text，创建一系列子字段，支持前缀完成（即，匹配项从输入的开头开始）和中缀完成（即，匹配项在输入中的任意位置）。
+
+- Shape，图形形状。
+
+- Sparser vector，稀疏向量。
+
+- Text，包括text和match_only_text，后者相当于index_options=docs和norms=false的text类型，节省了存储空间，加快了term级查询，降低了phrase级查询和评分的效率。
+
+- Token count，接收一个字符串，存储的是分词后的数量，可以用在text字段的子字段中。
+
+- Unsigned long，无符号长整型。
+
+- Version，版本号。
+
+### keyword和text如何选择
+
+二者都可以存储文本字段，如何选择取决于数据格式和搜索需求。
+
+使用text的情况
+
+- 文本是可读可理解的非结构化数据，比如小说内容、产品描述等。
+- 需要全文检索相关文档。
+
+使用keyword情况
+
+- 邮件地址、IP或者程序日志，有一定结构的非结构化数据。
+- 检索整个值或者模糊检索部分，例如org.foo.*，正则表达式匹配等。

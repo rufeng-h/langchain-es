@@ -70,9 +70,69 @@
 }
 ```
 
-## 一些问题
+举个例子，假如setting定义如上，mapping定义如下
 
-### 默认分析器
+```json
+"properties": {
+        "name": {
+            "type": "text",
+            "analyzer": "ik_max_word",
+            "search_quote_analyzer": "ik_smart_no_stop",
+            "search_analyzer": "ik_smart",
+            "copy_to": "all",
+            "fields": {
+                "keyword": {
+                    "type": "keyword",
+                    "normalizer": "punctuation_normalizer"
+                }, "text": {
+                    "type": "text",
+                    "index": False
+                }
+            }
+        }
+}
+```
+
+假如有一个文档的name值为 普通高等教育“十一五”国家级规划教材配套参考书：电子技术基础（数字部分）重点难点题解指导考研指南
+
+index阶段，会得到六个结果，一个是原始文本，其他五个是去除任意非0个中文标点的结果。
+
+search阶段，对于keyword类型，match和term查询的行为相同，可以通过上述六个结果查询到，增加或减少任何一个其他字符都无法查询到。
+
+以下查询皆可命中。
+
+```json
+POST /book/_search
+{
+  "query":{
+    "term":{
+      "name.keyword":"普通高等教育十一五国家级规划教材配套参考书电子技术基础（数字部分重点难点题解指导考研指南"
+    }
+  }
+}
+
+POST /book/_search
+{
+  "query":{
+    "term":{
+      "name.keyword":"普通高等教育“十一五国家级规划教材配套参考书电子技术基础（数字部分重点难点题解指导考研指南"
+    }
+  }
+}
+
+POST /book/_search
+{
+  "query":{
+    "match":{
+      "name.keyword":"普通高等教育“十一五”国家级规划教材配套参考书：电子技术基础（数字部分）重点难点题解指导考研指南"
+    }
+  }
+}
+```
+
+如不对name.keyword设置normalizer，则需要严格匹配原字段的值才可命中。
+
+## 默认分析器与IK分析器
 
 如果没有配置分词器，默认使用`stadard analyzer`，由一个`standard tokenizer`和`lower case token filter`、`stop token filter`组成。
 
