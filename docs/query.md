@@ -9,6 +9,12 @@
     - tokenizer，将文本切分成词条（term）。
     - tokenizer filters，进一步处理分词结果，例如大小写转换，同义词替换等。
 
+## filter和query
+
+filter不贡献评分，查询目标是判定是或者否，还可以使用缓存，效率更高。
+
+query计算评分，查询目标是判定相关性，效率比filter低。
+
 ### index、search和store
 
 ### store、_source和doc_values
@@ -37,19 +43,58 @@ docvalue_fields是取出建立了doc_values的字段，部分类型不支持。
 
 ## 检索特性
 
-- [collapse字段折叠](https://blog.csdn.net/ZYC88888/article/details/83023143)，按照特定的字段分组，每组均返回结果，例如搜索手机，每个品牌都想看看，按品牌字段折叠，返回每个品牌的可排序、过滤的数据。
-  
-- [filter过滤](https://juejin.cn/post/7073820135873576997)，与query使用场景不同。
+### [collapse字段折叠](https://blog.csdn.net/ZYC88888/article/details/83023143)
 
-- [highlight高亮]()，对存在检索关键词的结果字段添加特殊标签。
+按照特定的字段分组，每组均返回结果，例如搜索手机，每个品牌都想看看，按品牌字段折叠，返回每个品牌的可排序、过滤的数据。
+
+```text
+GET /book/_search
+{
+  "size": 5,
+  "_source": false,
+  "query": {
+    "match": {
+      "info": "化学"
+    }
+  },
+  "collapse": {
+    "field": "publish",
+    "inner_hits": {
+      "name": "test",
+      "size": 2,
+      "from": 2
+    }
+  }
+}
+```
+
+### [filter过滤](https://juejin.cn/post/7073820135873576997)
+
+有两种使用filter的方式
+
+- 使用带filter的bool查询，filter会在检索和聚合之前生效。
+
+- 直接使用post_filter查询，对检索无影响，在聚合之后生效，可以使用[rescore](https://www.elastic.co/guide/en/elasticsearch/reference/8.11/filter-search-results.html#rescore)提高检索的相关性。
+
+  rescore在所有分片上对query和post_filter的top-k个结果进行算分，可以调整top-k，原score权重，rescore权重，原score和rescore的计算方式（加减乘除平均）。
+
+### [highlight高亮]()
+
+对存在检索关键词的结果字段添加特殊标签。
 
 - [async异步搜索](https://blog.csdn.net/UbuntuTouch/article/details/107868114)，检索大量数据，可查看检索的运行状态。
 
 - [near real-time近实时搜索](https://doc.yonyoucloud.com/doc/mastering-elasticsearch/chapter-3/34_README.html)，添加或更新文档不修改旧的索引文件，写新文件到缓存，延迟刷盘。
-  
+
 - pagination分页，普通分页，深度分页scroll，search after。
 
-- [inner hits子文档命中](https://www.jianshu.com/p/0d6488a8072b)，对嵌套对象子文档进行搜索时，可以满足查询条件的具体子文档。
+  ### [inner hits不同阶段文档命中](https://www.jianshu.com/p/0d6488a8072b)
+
+  搜索嵌套对象或Join检索、字段折叠等情况下，可以查出具体每个阶段的文档。
+
+  例如字段折叠，inner_hits可以查询出折叠每个分组下具体有哪些文档。
+
+  支持name、sort、from、size参数。
 
 - selected field返回需要的字段，使用_source filter、fileds、docvalue_fields、stored_fields返回需要的文档字段。
 
@@ -66,9 +111,9 @@ docvalue_fields是取出建立了doc_values的字段，部分类型不支持。
 - 排序sort results，支持多字段，数组字段、嵌套字段排序，对于数组的排序，可以选择数组的最大值、最小值、平均值等作为排序依据。
 
 - [最邻近搜索knn search](https://www.elastic.co/guide/en/elasticsearch/reference/current/knn-search.html)，检索最邻近的向量，常用于相关性排名、搜索建议、图像视频检索。
-  
+
 - [语义检索semantic search](https://www.elastic.co/guide/en/elasticsearch/reference/current/semantic-search.html)，按语义和意图检索，而不是词汇检索，基于NLP和向量检索，支持上传模型，在存储和检索时自动编码，支持混合检索。
-  
+
   所有的检索特性可以查看[官方文档](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-your-data.html)
 
 ## 查询

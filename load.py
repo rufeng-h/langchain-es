@@ -99,7 +99,7 @@ mappings = {
         },
         "publish": {
             "type": "keyword",
-            "doc_values": False,
+            # "doc_values": False,
             "norms": False,
             "normalizer": "punctuation_normalizer",
             "copy_to": "meta",
@@ -107,7 +107,7 @@ mappings = {
         "type": {
             "type": "keyword",
             "normalizer": "punctuation_normalizer",
-            "doc_values": False,
+            # "doc_values": False,
             "norms": False,
             "copy_to": "meta",
         },
