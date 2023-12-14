@@ -80,35 +80,91 @@ GET /book/_search
 
 ### [highlight高亮]()
 
-对存在检索关键词的结果字段添加特殊标签。
+对存在检索关键词的结果字段添加特殊标签。es支持三种Highlighter。
 
-- [async异步搜索](https://blog.csdn.net/UbuntuTouch/article/details/107868114)，检索大量数据，可查看检索的运行状态。
+- Unified highlighter，默认的，底层使用Lucene Unified Highlighter，切句分词后BM25评分。
+- Plain highlighter，使用Standard Luncene Highlighter，通过关键字的重要性及关键字的位置信息，尝试尽量的体现查询的匹配逻辑。Plain Highlighter需要针对具体的查询和命中文档的每个字段进行实时的计算，其会在内存中创建一个小型的index，然后通过查询计划重新执行一遍查询，从而获得高亮需要使用底层的匹配信息，所以其比较适合小型的字段。
+- Fast vector highlighter，使用Lucene Fast Vector highlighter，需要设置term_vector为with_position_offsets，会占用更多存储空间，适合多字段、大字段的高亮。不支持span查询。
 
-- [near real-time近实时搜索](https://doc.yonyoucloud.com/doc/mastering-elasticsearch/chapter-3/34_README.html)，添加或更新文档不修改旧的索引文件，写新文件到缓存，延迟刷盘。
+既然需要高亮指定的句子短语，highlighter需要知道每个词的起始字符位置，有以下几种方式。
 
-- pagination分页，普通分页，深度分页scroll，search after。
+- 索引时分析文本的结果。如果mapping中index_options设置为offsets，unfied highlighter使用这些信息完成高亮而不用再次使用分析器分析文本。它会在预先分析的结果上再次运行查询并从索引中匹配字符偏移。对于大字段来说，不需要重新分析文本是很有意义的，同时相比于term_vector占用更小的磁盘空间。
 
-  ### [inner hits不同阶段文档命中](https://www.jianshu.com/p/0d6488a8072b)
+- Term vector。如果term_vector参数设置为with_positions_offsets，unified highlighter会自动使用这些信息高亮字段，因为可以直接访问到每个文档的词典，所以能提高大字段(1MB以上)和muti-term查询比如prefix或者wildcard的高亮速度。Fast vector highlighter只能使用term vector。
 
-  搜索嵌套对象或Join检索、字段折叠等情况下，可以查出具体每个阶段的文档。
+- Plain highlighter，当其他highlighter不能用时会使用这个，对于大文本会很耗时间和内存。
 
-  例如字段折叠，inner_hits可以查询出折叠每个分组下具体有哪些文档。
+  Highlighter是怎么工作的？对于一个查询，highlighter需要找到最佳的文本片段并且高亮目标词句，这里所指的片段是指一个词、多个词或者词句，这必须解决以下三个问题。
 
-  支持name、sort、from、size参数。
+  - 如何将文本切片？
 
-- selected field返回需要的字段，使用_source filter、fileds、docvalue_fields、stored_fields返回需要的文档字段。
+    Plain highlighter基于给定的分析器分词，然后遍历每一个词并添加到片段中，当片段将要超过最大fragment_size时，创建新的片段。如果分词不恰当，比如标点符号被单独分出或词以标点符号开头，可能会导致某个片段以标点符号开始。
 
-- across clusters分布式检索，支持多种检索API的分布式搜索。
+    Unified或者FVH highlighter使用Java的BreakIterator进行切片，在允许的片段大小下，尽量保证词句的完整性。
 
-- multiple indices多索引检索，支持同时从一次从多个索引检索数据。
+    相关的配置选项`fragment_size`, `fragmenter`, `type`, `boundary_chars`, `boundary_max_scan`, `boundary_scanner`, `boundary_scanner_locale`。
 
-- shard routing分片路由，自适应分片路由以减少搜索响应时间，可自定义检索哪个节点。
+  - 如何找到最佳的片段？
 
-- 自定义检索模板search templates，可复用的检索模板，根据不同变量生成不同query dsl。
+    三者都是在给定的查询上对片段进行评分，但是评分计算方式不同。
 
-- 同义词检索search with synonyms，定义同义词集、过滤器和分词器，提高检索准确度。
+    Plaing highlighter会在内存中为分词结果重新创建一个索引并执行Lunene的查询并计算得分。片段中每出现一个查询的term，片段的得分加1（boost决定，默认是1）,每个片段的每个term只会被计算一次。
 
-- 排序sort results，支持多字段，数组字段、嵌套字段排序，对于数组的排序，可以选择数组的最大值、最小值、平均值等作为排序依据。
+    FVH既不需要对文本进行分析，也不需要重新执行查询，而是term_vector的结果，进行切片，按照和Plain highlighter类似的方式计算片段得分，不同的是每个片段的term可以被计算多次。
+
+    Unified highlighter可以使用term_vector或者index_options配置的term_offsets，如果这两者不可用，将会使用Plain highlighter的方式在内存中建立索引并再次进行查询。Unified highlighter使用BM25算法j评分。
+
+  - 如何高亮片段中的词句？
+
+    [How to highlight the query terms in a fragment?](https://www.elastic.co/guide/en/elasticsearch/reference/8.11/highlighting.html#_how_to_highlight_the_query_terms_in_a_fragment)
+
+### [async异步搜索](https://blog.csdn.net/UbuntuTouch/article/details/107868114)
+
+检索大量数据，可查看检索的运行状态。
+
+### [near real-time近实时搜索](https://doc.yonyoucloud.com/doc/mastering-elasticsearch/chapter-3/34_README.html)
+
+添加或更新文档不修改旧的索引文件，写新文件到缓存，延迟刷盘。
+
+### pagination分页
+
+普通分页，深度分页scroll，search after。
+
+### [inner hits不同阶段文档命中](https://www.jianshu.com/p/0d6488a8072b)
+
+搜索嵌套对象或Join检索、字段折叠等情况下，可以查出具体每个阶段的文档。
+
+例如字段折叠，inner_hits可以查询出折叠每个分组下具体有哪些文档。
+
+支持name、sort、from、size参数。
+
+### selected field返回需要的字段
+
+使用_source filter、fileds、docvalue_fields、stored_fields返回需要的文档字段。
+
+### across clusters分布式检索
+
+支持多种检索API的分布式搜索。
+
+### multiple indices多索引检索
+
+支持同时从一次从多个索引检索数据。
+
+### shard routing分片路由
+
+自适应分片路由以减少搜索响应时间，可自定义检索哪个节点。
+
+### 自定义检索模板search templates
+
+可复用的检索模板，根据不同变量生成不同query dsl。
+
+### 同义词检索search with synonyms
+
+定义同义词集、过滤器和分词器，提高检索准确度。
+
+### 排序sort results
+
+支持多字段，数组字段、嵌套字段排序，对于数组的排序，可以选择数组的最大值、最小值、平均值等作为排序依据。对一个字段指定排序后，不再计算评分，除非指定track_score。
 
 - [最邻近搜索knn search](https://www.elastic.co/guide/en/elasticsearch/reference/current/knn-search.html)，检索最邻近的向量，常用于相关性排名、搜索建议、图像视频检索。
 
