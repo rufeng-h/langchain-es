@@ -60,6 +60,11 @@ GET /book/_search
   "collapse": {
     "field": "publish",
     "inner_hits": {
+      "_source": {
+      	"excludes": {
+      		"*vector"
+      	}
+      },
       "name": "test",
       "size": 2,
       "from": 2
@@ -120,11 +125,11 @@ GET /book/_search
 
 ### [async异步搜索](https://blog.csdn.net/UbuntuTouch/article/details/107868114)
 
-检索大量数据，可查看检索的运行状态。
+支持异步查询，可使用 [get async search](https://www.elastic.co/guide/en/elasticsearch/reference/8.11/async-search.html#get-async-search)查看检索的运行状态。
 
 ### [near real-time近实时搜索](https://doc.yonyoucloud.com/doc/mastering-elasticsearch/chapter-3/34_README.html)
 
-添加或更新文档不修改旧的索引文件，写新文件到缓存，延迟刷盘。
+添加或更新文档不修改旧的索引文件，写新文件到缓存，延迟刷盘，可通过API强制更新索引。
 
 ### pagination分页
 
@@ -152,11 +157,11 @@ GET /book/_search
 
 ### shard routing分片路由
 
-自适应分片路由以减少搜索响应时间，可自定义检索哪个节点。
+ES将索引分片并可以重复保存在多个节点上，可以提高容错和检索能力。默认情况下ES自动根据负载情况、响应时间选择合适的节点查询。在查询中可以配置preference优先去哪个节点查询，可以配置routing指定分片查询，可以配置每个节点同时并发检索的分片数。
 
 ### 自定义检索模板search templates
 
-可复用的检索模板，根据不同变量生成不同query dsl。
+复用的检索模板，根据不同变量生成不同query dsl，Mustache语法。
 
 ### 同义词检索search with synonyms
 
