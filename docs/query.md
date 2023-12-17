@@ -17,6 +17,10 @@ query计算评分，查询目标是判定相关性，效率比filter低。
 
 ### index、search和store
 
+- index，作名词相当于关系型数据库的表；作动词相当于解析文档，创建索引
+- search，搜索阶段
+- store，在ES中有时特指store字段，另存一份；有时是指普通的存储。
+
 ### store、_source和doc_values
 
 关于三者各自的作用可以查看我的另一篇文章。
