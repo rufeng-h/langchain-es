@@ -256,3 +256,20 @@
 
 - 邮件地址、IP或者程序日志，有一定结构的非结构化数据。
 - 检索整个值或者模糊检索部分，例如org.foo.*，正则表达式匹配等。
+
+### 如何创建mapping以优化存储
+
+可以按以下几个步骤进行
+
+1. 根据需求确定数据类型
+2. 对每个字段考虑
+   1. 是否需要索引，确定index。
+   2. 是否需要评分，确定norms。
+   3. 是否会用于排序聚合，确定doc_values。
+   4. 是否需要分词以及如何分词，确定analyzer，search_analyzer，quote_search_analyzer。
+   5. 是否需要高亮以及何种方式高亮，确定index_options和term_vector，本人使用的是默认值。
+   6. 是否需要在查询时stored_fileds，确定store，绝大多数情况下使用_source filter即可。
+   7. 是否有组合字段，确定copy_to，以及组合字段如何配置。
+3. 根据需求确定setting中的analysis配置，包括filter，char_filter，tokenizer，normalizer等配置。
+
+以上是个人比较常用的一些配置，其余可按需要修改。
