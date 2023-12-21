@@ -169,7 +169,44 @@ ES将索引分片并可以重复保存在多个节点上，可以提高容错和
 
 ### 同义词检索search with synonyms
 
-定义同义词集、过滤器和分词器，提高检索准确度。
+定义同义词集，在索引和检索阶段可以被文本分析器中的tokenfilter使用，提高检索准确度。ES中提供了三种方法配置同义词
+
+- 使用[synonyms APIs](https://www.elastic.co/guide/en/elasticsearch/reference/current/synonyms-apis.html)，可以动态灵活的定义和修改同义词集。使用这种方法修改同义词集后文本分析器会被自动重新加载，使用这种方法同义词替换只能用在搜索阶段。
+- 使用文件方式，在每个节点上（相对于ES配置目录）放置同义词文件，在每个节点上更新文件后，需要手动调用[reload search analyzers API](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-reload-analyzers.html)
+- 直接在tokenfiler定义时指定，不推荐。
+
+以下是同义词文件示例
+
+```text
+# 左边的词在tokenfilter会被替换为右边的词
+i-pod, i pod => ipod
+sea biscuit, sea biscit => seabiscuit
+
+# 取决于同义词的expand配置
+ipod, i-pod, i pod
+foozball , foosball
+universe , cosmos
+lol, laughing out loud
+
+# expand为true的情况（默认），左边任意一个词会被替换为右边三个词
+ipod, i-pod, i pod => ipod, i-pod, i pod
+# expand为false，相当于左边任意三个词替换为右边一个词
+ipod, i-pod, i pod => ipod
+
+# 以下两行配置
+foo => foo bar
+foo => baz
+# 相当于下面一行配置
+foo => foo bar, baz
+```
+
+何时使用同义词替换
+
+- 索引阶段，也就是说分词之后tokenfilter进行同义词替换，然后建立索引，如果同义词更新，需要重建索引。
+
+- 搜索阶段，同义词替换只发生在搜索阶段，同义词库文件变化不需要重建索引。
+
+  通过配置analyzer和search_analyzer指定何时使用同义词替换。
 
 ### 排序sort results
 
@@ -182,6 +219,18 @@ ES将索引分片并可以重复保存在多个节点上，可以提高容错和
   所有的检索特性可以查看[官方文档](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-your-data.html)
 
 ## 查询
+
+### query和filter
+
+query用于回答相似度是多少的问题，计算评分。
+
+filter用于回答是或否的问题，不计算评分，可使用缓存，效率更高
+
+### 组合查询
+
+#### Boolean
+
+#### Boosting
 
 - match，最常用，分词，全文检索。
 
